@@ -720,7 +720,21 @@
                                 <input type="text" id="admin-train-topic" required class="w-full px-4 py-2.5 border border-slate-300 rounded-xl text-sm" placeholder="مثال: تدريب شبكات سيسكو">
                             </div>
                         </div>
+                        <!-- الترتيب الجديد: البدء -> الانتهاء -> الأيام -> الأسابيع -->
                         <div class="grid grid-cols-4 gap-2">
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-700 mb-1">تاريخ البدء</label>
+                                <input type="date" id="admin-train-start" required onchange="calculateTrainingDays()" class="w-full px-2 py-2.5 border border-slate-300 rounded-xl text-xs">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-700 mb-1">تاريخ الانتهاء</label>
+                                <input type="date" id="admin-train-end" required onchange="calculateTrainingDays()" class="w-full px-2 py-2.5 border border-slate-300 rounded-xl text-xs">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-700 mb-1">المدة والأيام (تلقائي)</label>
+                                <input type="text" id="admin-train-days-display" readonly class="w-full px-2 py-2.5 border border-slate-300 rounded-xl text-xs bg-slate-100 font-bold text-navy-900 text-center" value="30 يوماً">
+                                <input type="hidden" id="admin-train-days-input" value="30">
+                            </div>
                             <div>
                                 <label class="block text-xs font-semibold text-slate-700 mb-1">عدد الأسابيع</label>
                                 <select id="admin-train-weeks" required class="w-full px-2 py-2.5 border border-slate-300 rounded-xl text-xs bg-white font-bold text-navy-900">
@@ -730,19 +744,6 @@
                                     <option value="2 أسابيع">2 أسبوع</option>
                                     <option value="1 أسبوع">1 أسبوع</option>
                                 </select>
-                            </div>
-                            <div>
-                                <label class="block text-xs font-semibold text-slate-700 mb-1">المدة والأيام (تلقائي)</label>
-                                <input type="text" id="admin-train-days-display" readonly class="w-full px-2 py-2.5 border border-slate-300 rounded-xl text-xs bg-slate-100 font-bold text-navy-900 text-center" value="30 يوماً">
-                                <input type="hidden" id="admin-train-days-input" value="30">
-                            </div>
-                            <div>
-                                <label class="block text-xs font-semibold text-slate-700 mb-1">تاريخ البدء</label>
-                                <input type="date" id="admin-train-start" required onchange="calculateTrainingDays()" class="w-full px-2 py-2.5 border border-slate-300 rounded-xl text-xs">
-                            </div>
-                            <div>
-                                <label class="block text-xs font-semibold text-slate-700 mb-1">تاريخ الانتهاء</label>
-                                <input type="date" id="admin-train-end" required onchange="calculateTrainingDays()" class="w-full px-2 py-2.5 border border-slate-300 rounded-xl text-xs">
                             </div>
                         </div>
                         <div>
@@ -883,7 +884,7 @@
     <!-- Firebase & Application Core Script -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, signInAnonymously, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, setDoc, getDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         const firebaseConfig = {
@@ -1098,17 +1099,32 @@
         window.handleAdminLogin = function(e) {
             e.preventDefault();
             const pass = document.getElementById('admin-password-input').value;
-            if (pass === appData.adminPassword) {
-                appData.isAdminLoggedIn = true;
-                closeAdminLoginModal();
-                document.getElementById('btn-admin').classList.remove('hidden');
-                switchTab('admin');
-                showMsg("تم تسجيل دخول المسؤولين", "مرحباً بك في لوحة تحكم إدارة التدريب.");
-            } else {
-                const err = document.getElementById('admin-login-error');
-                err.innerText = "الرقم السري غير صحيح!";
-                err.classList.remove('hidden');
+            const adminEmail = "admin@madina.edu";
+
+            if (!auth) {
+                if (pass === appData.adminPassword) {
+                    appData.isAdminLoggedIn = true;
+                    closeAdminLoginModal();
+                    document.getElementById('btn-admin').classList.remove('hidden');
+                    switchTab('admin');
+                    showMsg("تم تسجيل دخول المسؤولين", "مرحباً بك.");
+                }
+                return;
             }
+
+            signInWithEmailAndPassword(auth, adminEmail, pass)
+                .then((userCredential) => {
+                    appData.isAdminLoggedIn = true;
+                    closeAdminLoginModal();
+                    document.getElementById('btn-admin').classList.remove('hidden');
+                    switchTab('admin');
+                    showMsg("تم تسجيل دخول المسؤولين", "مرحباً بك في لوحة تحكم إدارة التدريب (مؤمن عبر Firebase).");
+                })
+                .catch((error) => {
+                    const err = document.getElementById('admin-login-error');
+                    err.innerText = "الرقم السري غير صحيح أو خطأ في المصادقة!";
+                    err.classList.remove('hidden');
+                });
         }
 
         window.adminLogout = function() {
